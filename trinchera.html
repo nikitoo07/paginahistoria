@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Representación interactiva 3D de trincheras de la Primera Guerra Mundial con soldados alemanes y franceses">
+    <title>Trinchera Interactiva - Primera Guerra Mundial</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --clr-bg-dark: #0a0a0a;
+            --clr-bg-darker: #050505;
+            --clr-mud: #4a3f2e;
+            --clr-mud-dark: #2d2519;
+            --clr-wood: #5c4a33;
+            --clr-german: #4a5759;
+            --clr-french: #2b4c7e;
+            --clr-barbed: #6b6b6b;
+            --clr-text: #e8e8e8;
+            --clr-text-dim: #a0a0a0;
+            --clr-accent: #d4af37;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--clr-bg-darker) 0%, var(--clr-bg-dark) 100%);
+            color: var(--clr-text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 2rem 1rem;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+        }
+
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.8rem, 5vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--clr-accent) 0%, #fff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--clr-text-dim);
+            font-size: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--clr-accent);
+            border-radius: 15px;
+            padding: 1rem;
+            min-width: 200px;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .stats-panel h3 {
+            font-family: 'Playfair Display', serif;
+            color: var(--clr-accent);
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            font-size: 0.9rem;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--clr-text-dim);
+        }
+
+        .stat-value {
+            color: var(--clr-accent);
+            font-weight: 600;
+        }
+
+        .scene-container {
+            position: relative;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem 2rem;
+        }
+
+        .trench-scene {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: linear-gradient(to bottom,
+                    #1a1a2e 0%,
+                    #2d2519 40%,
+                    var(--clr-mud-dark) 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 -100px 100px rgba(0, 0, 0, 0.3);
+            perspective: 1000px;
+            transition: filter 0.3s ease;
+        }
+
+        .trench-scene.night-mode {
+            filter: brightness(0.5) contrast(1.2);
+        }
+
+        /* Sky and background */
+        .sky {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30%;
+            background: linear-gradient(to bottom, #1a1a2e, #2d2519);
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        .sky.night {
+            background: linear-gradient(to bottom, #0a0a1a, #1a1a2e);
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(100, 100, 100, 0.3);
+            border-radius: 50%;
+            animation: float 30s infinite ease-in-out;
+        }
+
+        .cloud:nth-child(1) {
+            width: 100px;
+            height: 40px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .cloud:nth-child(2) {
+            width: 80px;
+            height: 35px;
+            top: 40%;
+            left: 60%;
+            animation-delay: -10s;
+        }
+
+        .cloud:nth-child(3) {
+            width: 120px;
+            height: 45px;
+            top: 15%;
+            left: 80%;
+            animation-delay: -20s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateX(0) translateY(0);
+            }
+
+            50% {
+                transform: translateX(-30px) translateY(-10px);
+            }
+        }
+
+        /* No man's land */
+        .no-mans-land {
+            position: absolute;
+            top: 30%;
+            left: 0;
+            right: 0;
+            height: 20%;
+            background: linear-gradient(to bottom, #3d3020, var(--clr-mud));
+            border-top: 2px solid rgba(0, 0, 0, 0.5);
+        }
+
+        .crater {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            background: radial-gradient(ellipse at center, var(--clr-mud-dark), transparent);
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        .crater:nth-child(1) {
+            top: 40%;
+            left: 20%;
+        }
+
+        .crater:nth-child(2) {
+            top: 60%;
+            left: 50%;
+            width: 80px;
+        }
+
+        .crater:nth-child(3) {
+            top: 30%;
+            left: 75%;
+        }
+
+        /* Barbed wire */
+        .barbed-wire {
+            position: absolute;
+            top: 35%;
+            left: 10%;
+            right: 10%;
+            height: 40px;
+            z-index: 10;
+        }
+
+        .wire-strand {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: repeating-linear-gradient(90deg,
+                    var(--clr-barbed) 0px,
+                    var(--clr-barbed) 10px,
+                    transparent 10px,
+                    transparent 15px);
+            opacity: 0.7;
+        }
+
+        .wire-strand:nth-child(1) {
+            top: 5px;
+        }
+
+        .wire-strand:nth-child(2) {
+            top: 15px;
+        }
+
+        .wire-strand:nth-child(3) {
+            top: 25px;
+        }
+
+        .barb {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--clr-barbed);
+            transform: rotate(45deg);
+            animation: glint 3s infinite;
+        }
+
+        @keyframes glint {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+                box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            }
+        }
+
+        /* Trenches */
+        .trench {
+            position: absolute;
+            bottom: 0;
+            width: 35%;
+            height: 50%;
+            background: linear-gradient(to bottom, var(--clr-mud), var(--clr-mud-dark));
+            border-top: 3px solid var(--clr-wood);
+            box-shadow: inset 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .trench-german {
+            left: 5%;
+            transform: perspective(500px) rotateY(5deg);
+        }
+
+        .trench-french {
+            right: 5%;
+            transform: perspective(500px) rotateY(-5deg);
+        }
+
+        .sandbags {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            height: 25px;
+            background: repeating-linear-gradient(90deg,
+                    #6b5d4f 0px,
+                    #6b5d4f 40px,
+                    #5a4d3f 40px,
+                    #5a4d3f 42px);
+            border-radius: 5px 5px 0 0;
+            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .wooden-support {
+            position: absolute;
+            width: 8px;
+            background: var(--clr-wood);
+            height: 100%;
+            box-shadow: inset 2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .wooden-support:nth-child(2) {
+            left: 20%;
+        }
+
+        .wooden-support:nth-child(3) {
+            left: 40%;
+        }
+
+        .wooden-support:nth-child(4) {
+            left: 60%;
+        }
+
+        .wooden-support:nth-child(5) {
+            left: 80%;
+        }
+
+        /* Soldiers */
+        .soldier {
+            position: absolute;
+            width: 40px;
+            height: 80px;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            animation: breathe 3s infinite ease-in-out;
+        }
+
+        .soldier:hover {
+            transform: scale(1.15) translateY(-8px);
+            filter: brightness(1.3);
+            z-index: 100;
+        }
+
+        .soldier.selected {
+            filter: drop-shadow(0 0 10px var(--clr-accent));
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-3px);
+            }
+        }
+
+        .soldier-head {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #d4a574;
+        }
+
+        .helmet {
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 15px;
+            border-radius: 50% 50% 0 0;
+        }
+
+        .german .helmet {
+            background: linear-gradient(135deg, var(--clr-german), #3a4749);
+            border-top: 3px solid #2a3739;
+        }
+
+        .french .helmet {
+            background: linear-gradient(135deg, var(--clr-french), #1a3c6e);
+            border-top: 3px solid #0a2c5e;
+        }
+
+        .soldier-body {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 35px;
+            border-radius: 5px;
+        }
+
+        .german .soldier-body {
+            background: linear-gradient(135deg, var(--clr-german), #3a4749);
+        }
+
+        .french .soldier-body {
+            background: linear-gradient(135deg, var(--clr-french), #1a3c6e);
+        }
+
+        .soldier-legs {
+            position: absolute;
+            top: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 25px;
+            height: 25px;
+            background: #3d3020;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .rifle {
+            position: absolute;
+            top: 25px;
+            right: -15px;
+            width: 3px;
+            height: 40px;
+            background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+            transform: rotate(-45deg);
+            border-radius: 2px;
+        }
+
+        .rifle::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -2px;
+            width: 7px;
+            height: 3px;
+            background: #1a1a1a;
+            border-radius: 1px;
+        }
+
+        /* Position soldiers */
+        .trench-german .soldier:nth-child(7) {
+            bottom: 20px;
+            left: 15%;
+            animation-delay: 0s;
+        }
+
+        .trench-german .soldier:nth-child(8) {
+            bottom: 20px;
+            left: 45%;
+            animation-delay: 1s;
+        }
+
+        .trench-german .soldier:nth-child(9) {
+            bottom: 20px;
+            left: 75%;
+            animation-delay: 2s;
+        }
+
+        .trench-french .soldier:nth-child(7) {
+            bottom: 20px;
+            left: 15%;
+            animation-delay: 0.5s;
+        }
+
+        .trench-french .soldier:nth-child(8) {
+            bottom: 20px;
+            left: 45%;
+            animation-delay: 1.5s;
+        }
+
+        .trench-french .soldier:nth-child(9) {
+            bottom: 20px;
+            left: 75%;
+            animation-delay: 2.5s;
+        }
+
+        /* Info card */
+        .soldier-info-card {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--clr-accent);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            z-index: 2000;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .soldier-info-card.active {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .info-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--clr-accent);
+        }
+
+        .info-card-header h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: var(--clr-accent);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--clr-text);
+            font-size: 2rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            transform: rotate(90deg);
+            color: var(--clr-accent);
+        }
+
+        .info-card-content {
+            line-height: 1.8;
+        }
+
+        .info-card-content p {
+            margin-bottom: 1rem;
+            color: var(--clr-text-dim);
+        }
+
+        .info-card-content strong {
+            color: var(--clr-text);
+        }
+
+        .info-detail {
+            background: rgba(212, 175, 55, 0.1);
+            padding: 0.8rem;
+            border-radius: 10px;
+            margin: 0.5rem 0;
+            border-left: 3px solid var(--clr-accent);
+        }
+
+        /* Info panels */
+        .info-panel {
+            position: absolute;
+            top: 50%;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            max-width: 250px;
+            transform: translateY(-50%);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .info-panel-german {
+            left: 2%;
+        }
+
+        .info-panel-french {
+            right: 2%;
+        }
+
+        .info-panel h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: var(--clr-accent);
+        }
+
+        .info-panel p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--clr-text-dim);
+        }
+
+        .flag {
+            display: inline-block;
+            width: 20px;
+            height: 15px;
+            margin-right: 8px;
+            border-radius: 2px;
+            vertical-align: middle;
+        }
+
+        .flag-german {
+            background: linear-gradient(to bottom, #000 33%, #dd0000 33%, #dd0000 66%, #ffce00 66%);
+        }
+
+        .flag-french {
+            background: linear-gradient(to right, #002395 33%, #fff 33%, #fff 66%, #ed2939 66%);
+        }
+
+        /* Controls */
+        .controls {
+            text-align: center;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .controls h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--clr-accent);
+        }
+
+        .controls p {
+            color: var(--clr-text-dim);
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, var(--clr-accent), #c49b2e);
+            color: #000;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #4a5759, #3a4749);
+            color: var(--clr-text);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #c41e3a, #a01828);
+            color: var(--clr-text);
+        }
+
+        /* Explosion effect */
+        .explosion {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff6600, #ff0000, transparent);
+            opacity: 0;
+            pointer-events: none;
+            animation: explode 1s ease-out;
+        }
+
+        @keyframes explode {
+            0% {
+                opacity: 1;
+                transform: scale(0);
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(2);
+            }
+        }
+
+        /* Smoke effect */
+        .smoke {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(100, 100, 100, 0.6), transparent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: smoke-rise 3s ease-out;
+        }
+
+        @keyframes smoke-rise {
+            0% {
+                opacity: 0.8;
+                transform: translateY(0) scale(0.5);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-150px) scale(2);
+            }
+        }
+
+        /* Shake animation */
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-10px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(10px);
+            }
+        }
+
+        .shaking {
+            animation: shake 0.5s;
+        }
+
+        /* Flash effect */
+        .flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            opacity: 0;
+            pointer-events: none;
+            animation: flash 0.2s;
+        }
+
+        @keyframes flash {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Bombardment overlay */
+        .bombardment-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bombardment-overlay.active {
+            display: flex;
+        }
+
+        .bombardment-message {
+            background: rgba(196, 30, 58, 0.9);
+            padding: 2rem 3rem;
+            border-radius: 15px;
+            border: 3px solid #fff;
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: #fff;
+            text-align: center;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .trench-scene {
+                height: 500px;
+            }
+
+            .info-panel {
+                position: static;
+                transform: none;
+                margin: 1rem;
+                max-width: 100%;
+            }
+
+            .trench {
+                width: 40%;
+            }
+
+            .stats-panel {
+                top: 10px;
+                right: 10px;
+                font-size: 0.85rem;
+                min-width: 150px;
+            }
+
+            .soldier-info-card {
+                width: 95%;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>Trinchera de la Gran Guerra</h1>
+        <p>Representación interactiva de las trincheras del Frente Occidental (1914-1918)</p>
+    </header>
+
+    <!-- Stats Panel -->
+    <div class="stats-panel">
+        <h3>⚔️ Estadísticas</h3>
+        <div class="stat-item">
+            <span class="stat-label">Bombardeos:</span>
+            <span class="stat-value" id="bombardCount">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Explosiones:</span>
+            <span class="stat-value" id="explosionCount">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Modo:</span>
+            <span class="stat-value" id="modeDisplay">Día</span>
+        </div>
+    </div>
+
+    <!-- Soldier Info Card -->
+    <div class="soldier-info-card" id="soldierInfoCard">
+        <div class="info-card-header">
+            <h3 id="soldierName">Soldado</h3>
+            <button class="close-btn" onclick="closeSoldierInfo()">×</button>
+        </div>
+        <div class="info-card-content" id="soldierInfoContent">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Bombardment Overlay -->
+    <div class="bombardment-overlay" id="bombardmentOverlay">
+        <div class="bombardment-message">
+            ⚠️ BOMBARDEO EN CURSO ⚠️
+        </div>
+    </div>
+
+    <div class="scene-container">
+        <div class="info-panel info-panel-german">
+            <h3><span class="flag flag-german"></span>Alemania</h3>
+            <p>Imperio Alemán. Uniformes grises (Feldgrau). Cascos Stahlhelm. Defendían posiciones fortificadas con
+                ametralladoras MG08.</p>
+        </div>
+
+        <div class="trench-scene" id="trenchScene">
+            <!-- Sky -->
+            <div class="sky" id="sky">
+                <div class="cloud"></div>
+                <div class="cloud"></div>
+                <div class="cloud"></div>
+            </div>
+
+            <!-- No man's land -->
+            <div class="no-mans-land">
+                <div class="crater"></div>
+                <div class="crater"></div>
+                <div class="crater"></div>
+            </div>
+
+            <!-- Barbed wire -->
+            <div class="barbed-wire" id="barbedWire">
+                <div class="wire-strand"></div>
+                <div class="wire-strand"></div>
+                <div class="wire-strand"></div>
+            </div>
+
+            <!-- German trench -->
+            <div class="trench trench-german">
+                <div class="sandbags"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+
+                <!-- German soldiers -->
+                <div class="soldier german" data-id="german-1">
+                    <div class="soldier-head">
+                        <div class="helmet"></div>
+                    </div>
+                    <div class="soldier-body"></div>
+                    <div class="soldier-legs"></div>
+                    <div class="rifle"></div>
+                </div>
+                <div class="soldier german" data-id="german-2">
+                    <div class="soldier-head">
+                        <div class="helmet"></div>
+                    </div>
+                    <div class="soldier-body"></div>
+                    <div class="soldier-legs"></div>
+                    <div class="rifle"></div>
+                </div>
+                <div class="soldier german" data-id="german-3">
+                    <div class="soldier-head">
+                        <div class="helmet"></div>
+                    </div>
+                    <div class="soldier-body"></div>
+                    <div class="soldier-legs"></div>
+                    <div class="rifle"></div>
+                </div>
+            </div>
+
+            <!-- French trench -->
+            <div class="trench trench-french">
+                <div class="sandbags"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+                <div class="wooden-support"></div>
+
+                <!-- French soldiers -->
+                <div class="soldier french" data-id="french-1">
+                    <div class="soldier-head">
+                        <div class="helmet"></div>
+                    </div>
+                    <div class="soldier-body"></div>
+                    <div class="soldier-legs"></div>
+                    <div class="rifle"></div>
+                </div>
+                <div class="soldier french" data-id="french-2">
+                    <div class="soldier-head">
+                        <div class="helmet"></div>
+                    </div>
+                    <div class="soldier-body"></div>
+                    <div class="soldier-legs"></div>
+                    <div class="rifle"></div>
+                </div>
+                <div class="soldier french" data-id="french-3">
+                    <div class="soldier-head">
+                        <div class="helmet"></div>
+                    </div>
+                    <div class="soldier-body"></div>
+                    <div class="soldier-legs"></div>
+                    <div class="rifle"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel info-panel-french">
+            <h3><span class="flag flag-french"></span>Francia</h3>
+            <p>República Francesa. Uniformes azul horizonte. Cascos Adrian. Los "Poilus" resistieron heroicamente en
+                Verdún con el lema "¡Ils ne passeront pas!"</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h2>Controles Interactivos</h2>
+        <p>
+            <strong>Haz clic en cualquier soldado</strong> para ver información detallada sobre su rol, armamento y
+            condiciones de vida en las trincheras.
+            Los soldados representan a los millones de hombres que lucharon en el Frente Occidental durante 1914-1918.
+        </p>
+
+        <div class="btn-group">
+            <a href="index.html" class="btn">← Volver al Proyecto</a>
+            <button class="btn btn-danger" onclick="startBombardment()">💣 Bombardeo Intenso</button>
+            <button class="btn btn-secondary" onclick="toggleNightMode()">🌙 Modo Día/Noche</button>
+            <button class="btn btn-secondary" onclick="createExplosion()">💥 Explosión Simple</button>
+        </div>
+
+        <p style="margin-top: 2rem; font-size: 0.9rem;">
+            <strong>Dato histórico:</strong> Durante la Batalla del Somme (1916), se dispararon más de 1.5 millones de
+            proyectiles
+            de artillería en solo una semana de bombardeo preparatorio. El ruido era tan intenso que se podía escuchar
+            desde Londres, a más de 200 kilómetros de distancia.
+        </p>
+    </div>
+
+    <script>
+        // Soldier data
+        const soldierData = {
+            'german-1': {
+                name: 'Obergefreiter Hans Müller',
+                rank: 'Cabo Mayor',
+                age: '24 años',
+                unit: '16º Regimiento de Infantería Bávara',
+                weapon: 'Rifle Gewehr 98 (7.92mm)',
+                description: 'Hans lleva 8 meses en el Frente Occidental. Antes de la guerra era carpintero en Múnich. Su unidad ha participado en la defensa de Verdún.',
+                conditions: 'Vive en condiciones extremas: lodo constante, ratas, piojos y el terror permanente de los bombardeos aliados. Comparte la trinchera con 40 hombres más.',
+                equipment: 'Porta casco Stahlhelm M1916, máscara de gas, cantimplora, municiones y una bayoneta. Su uniforme Feldgrau está diseñado para camuflaje.'
+            },
+            'german-2': {
+                name: 'Schütze Friedrich Weber',
+                rank: 'Soldado Raso',
+                age: '19 años',
+                unit: '5º Regimiento de Infantería Prusiana',
+                weapon: 'Rifle Gewehr 98 con bayoneta',
+                description: 'Friedrich fue reclutado hace solo 3 meses. Es el más joven de su pelotón. Escribe cartas a su madre cada semana, aunque muchas nunca llegan.',
+                conditions: 'Sufre de "pie de trinchera" debido a la humedad constante. Ha presenciado varios ataques con gas mostaza que dejaron ciegos a varios compañeros.',
+                equipment: 'Además de su rifle, lleva granadas de mano modelo M1915 (Stielhandgranate) y herramientas de excavación para mantener la trinchera.'
+            },
+            'german-3': {
+                name: 'Unteroffizier Otto Schmidt',
+                rank: 'Sargento',
+                age: '32 años',
+                unit: '12º Regimiento de Infantería Sajona',
+                weapon: 'Pistola Luger P08 y rifle Gewehr 98',
+                description: 'Otto es veterano de guerra desde 1914. Ha sobrevivido a la Primera Batalla del Marne y a Tannenberg. Lidera su escuadra con experiencia pero creciente desilusión.',
+                conditions: 'Como sargento, debe mantener la moral de sus hombres mientras enfrenta bombardeos diarios. Ha perdido a muchos amigos y lucha con el trauma psicológico.',
+                equipment: 'Porta binoculares Zeiss, mapas tácticos, silbato de mando y una pistola de bengalas para señalización. Su experiencia es vital para la supervivencia del grupo.'
+            },
+            'french-1': {
+                name: 'Caporal Pierre Dubois',
+                rank: 'Cabo',
+                age: '27 años',
+                unit: '153º Regimiento de Infantería',
+                weapon: 'Rifle Lebel Modelo 1886 (8mm)',
+                description: 'Pierre es un "Poilu" (soldado francés) que ha luchado desde el inicio de la guerra. Participó en la defensa de Verdún donde su regimiento sufrió 70% de bajas.',
+                conditions: 'Vive en trincheras inundadas de agua y lodo. La comida es escasa: pan duro, carne enlatada y café. El frío del invierno es casi tan mortal como las balas.',
+                equipment: 'Lleva casco Adrian M1915 de acero, máscara de gas ARS, bayoneta Rosalie y municiones. Su uniforme "bleu horizon" reemplazó al rojo visible de 1914.'
+            },
+            'french-2': {
+                name: 'Soldat Jacques Martin',
+                rank: 'Soldado',
+                age: '22 años',
+                unit: '45º Regimiento de Infantería Colonial',
+                weapon: 'Rifle Berthier Modelo 1907',
+                description: 'Jacques es de Marsella. Fue movilizado en 1916. Sueña con volver a ver el Mediterráneo. Mantiene un diario secreto donde documenta los horrores de la guerra.',
+                conditions: 'Ha sobrevivido a tres ataques "por encima del parapeto" (over the top). Sufre de pesadillas constantes y temblores en las manos por el estrés del combate.',
+                equipment: 'Además de su rifle, porta granadas F1 (granada de piña), pala de trinchera, y una pequeña foto de su familia que guarda en su bolsillo.'
+            },
+            'french-3': {
+                name: 'Sergent Henri Rousseau',
+                rank: 'Sargento',
+                age: '35 años',
+                unit: '27º Regimiento de Infantería Alpina',
+                weapon: 'Pistola Ruby calibre .32 y rifle Lebel',
+                description: 'Henri es veterano de las batallas del Marne, Ypres y Somme. Condecorado con la Croix de Guerre. Su liderazgo ha salvado a su pelotón en múltiples ocasiones.',
+                conditions: 'Como líder, debe enviar hombres a misiones suicidas sabiendo que muchos no volverán. La carga emocional es inmensa. Fuma constantemente para calmar los nervios.',
+                equipment: 'Porta prismáticos, brújula, mapas de sector, silbato de ataque y pistola de bengalas. Su experiencia táctica es crucial para coordinar defensas y contraataques.'
+            }
+        };
+
+        // Stats
+        let bombardCount = 0;
+        let explosionCount = 0;
+        let isNightMode = false;
+
+        // Add barbs to wire
+        const barbedWire = document.getElementById('barbedWire');
+        for (let i = 0; i < 25; i++) {
+            const barb = document.createElement('div');
+            barb.className = 'barb';
+            barb.style.left = `${Math.random() * 100}%`;
+            barb.style.top = `${Math.random() * 30}px`;
+            barb.style.animationDelay = `${Math.random() * 3}s`;
+            barbedWire.appendChild(barb);
+        }
+
+        // Soldier interaction
+        const soldiers = document.querySelectorAll('.soldier');
+        soldiers.forEach(soldier => {
+            soldier.addEventListener('click', function (e) {
+                e.stopPropagation();
+                showSoldierInfo(this.dataset.id);
+
+                // Remove selected class from all soldiers
+                soldiers.forEach(s => s.classList.remove('selected'));
+                // Add selected class to clicked soldier
+                this.classList.add('selected');
+            });
+        });
+
+        // Show soldier info
+        function showSoldierInfo(soldierId) {
+            const data = soldierData[soldierId];
+            const card = document.getElementById('soldierInfoCard');
+            const nameEl = document.getElementById('soldierName');
+            const contentEl = document.getElementById('soldierInfoContent');
+
+            nameEl.textContent = data.name;
+            contentEl.innerHTML = `
+                <div class="info-detail">
+                    <strong>Rango:</strong> ${data.rank} | <strong>Edad:</strong> ${data.age}
+                </div>
+                <div class="info-detail">
+                    <strong>Unidad:</strong> ${data.unit}
+                </div>
+                <div class="info-detail">
+                    <strong>Armamento:</strong> ${data.weapon}
+                </div>
+                <p><strong>Historia:</strong> ${data.description}</p>
+                <p><strong>Condiciones de vida:</strong> ${data.conditions}</p>
+                <p><strong>Equipamiento:</strong> ${data.equipment}</p>
+            `;
+
+            card.classList.add('active');
+        }
+
+        // Close soldier info
+        function closeSoldierInfo() {
+            const card = document.getElementById('soldierInfoCard');
+            card.classList.remove('active');
+
+            // Remove selected class from all soldiers
+            document.querySelectorAll('.soldier').forEach(s => s.classList.remove('selected'));
+        }
+
+        // Close card when clicking outside
+        document.addEventListener('click', function (e) {
+            const card = document.getElementById('soldierInfoCard');
+            if (!card.contains(e.target) && !e.target.closest('.soldier')) {
+                closeSoldierInfo();
+            }
+        });
+
+        // Simple explosion
+        function createExplosion() {
+            const scene = document.getElementById('trenchScene');
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            explosion.style.left = `${Math.random() * 80 + 10}%`;
+            explosion.style.top = `${Math.random() * 60 + 20}%`;
+            scene.appendChild(explosion);
+
+            // Flash effect
+            const flash = document.createElement('div');
+            flash.className = 'flash';
+            scene.appendChild(flash);
+
+            setTimeout(() => {
+                explosion.remove();
+                flash.remove();
+            }, 1000);
+
+            // Add shake effect
+            scene.classList.add('shaking');
+            setTimeout(() => {
+                scene.classList.remove('shaking');
+            }, 500);
+
+            // Update stats
+            explosionCount++;
+            document.getElementById('explosionCount').textContent = explosionCount;
+        }
+
+        // Intense bombardment
+        function startBombardment() {
+            const scene = document.getElementById('trenchScene');
+            const overlay = document.getElementById('bombardmentOverlay');
+
+            bombardCount++;
+            document.getElementById('bombardCount').textContent = bombardCount;
+
+            // Show overlay
+            overlay.classList.add('active');
+
+            // Create multiple explosions over 10 seconds
+            const duration = 10000; // 10 seconds
+            const explosionInterval = 300; // Every 300ms
+            const totalExplosions = duration / explosionInterval;
+
+            let count = 0;
+            const bombardInterval = setInterval(() => {
+                if (count >= totalExplosions) {
+                    clearInterval(bombardInterval);
+                    overlay.classList.remove('active');
+                    return;
+                }
+
+                // Create 2-3 explosions at once
+                const simultaneous = Math.floor(Math.random() * 2) + 2;
+                for (let i = 0; i < simultaneous; i++) {
+                    createBombExplosion();
+                }
+
+                // Shake scene
+                scene.classList.add('shaking');
+                setTimeout(() => {
+                    scene.classList.remove('shaking');
+                }, 500);
+
+                count++;
+            }, explosionInterval);
+        }
+
+        // Create bomb explosion with smoke
+        function createBombExplosion() {
+            const scene = document.getElementById('trenchScene');
+
+            // Explosion
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            const size = Math.random() * 100 + 80;
+            explosion.style.width = `${size}px`;
+            explosion.style.height = `${size}px`;
+            explosion.style.left = `${Math.random() * 90 + 5}%`;
+            explosion.style.top = `${Math.random() * 70 + 15}%`;
+            scene.appendChild(explosion);
+
+            // Flash
+            const flash = document.createElement('div');
+            flash.className = 'flash';
+            scene.appendChild(flash);
+
+            // Smoke
+            setTimeout(() => {
+                const smoke = document.createElement('div');
+                smoke.className = 'smoke';
+                smoke.style.left = explosion.style.left;
+                smoke.style.top = explosion.style.top;
+                scene.appendChild(smoke);
+
+                setTimeout(() => {
+                    smoke.remove();
+                }, 3000);
+            }, 500);
+
+            setTimeout(() => {
+                explosion.remove();
+                flash.remove();
+            }, 1000);
+
+            // Update stats
+            explosionCount++;
+            document.getElementById('explosionCount').textContent = explosionCount;
+        }
+
+        // Toggle night mode
+        function toggleNightMode() {
+            isNightMode = !isNightMode;
+            const scene = document.getElementById('trenchScene');
+            const sky = document.getElementById('sky');
+
+            if (isNightMode) {
+                scene.classList.add('night-mode');
+                sky.classList.add('night');
+                document.getElementById('modeDisplay').textContent = 'Noche';
+            } else {
+                scene.classList.remove('night-mode');
+                sky.classList.remove('night');
+                document.getElementById('modeDisplay').textContent = 'Día';
+            }
+        }
+
+        // Random ambient explosions
+        setInterval(() => {
+            if (Math.random() > 0.85) {
+                const scene = document.getElementById('trenchScene');
+                const explosion = document.createElement('div');
+                explosion.className = 'explosion';
+                explosion.style.left = `${Math.random() * 60 + 20}%`;
+                explosion.style.top = `${Math.random() * 20 + 30}%`;
+                explosion.style.width = '60px';
+                explosion.style.height = '60px';
+                scene.appendChild(explosion);
+
+                setTimeout(() => {
+                    explosion.remove();
+                }, 1000);
+            }
+        }, 6000);
+    </script>
+</body>
+
+</html>
