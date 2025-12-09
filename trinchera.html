@@ -870,6 +870,62 @@
                 padding: 1.5rem;
             }
         }
+
+        /* Mobile phones (portrait) */
+        @media (max-width: 480px) {
+            .scene-container {
+                padding: 0.75rem 0.75rem 1rem;
+            }
+
+            .trench-scene {
+                height: 320px;
+                border-radius: 12px;
+            }
+
+            .trench {
+                width: 46%;
+                height: 48%;
+            }
+
+            .soldier {
+                width: 28px;
+                height: 56px;
+            }
+
+            .soldier-head { width: 14px; height: 14px; }
+            .soldier-body { width: 22px; height: 30px; }
+            .soldier-legs { width: 18px; height: 20px; }
+
+            /* Convertir el panel de estadísticas a barra inferior para no tapar la escena */
+            .stats-panel {
+                position: fixed;
+                left: 8px;
+                right: 8px;
+                bottom: 10px;
+                top: auto;
+                min-width: auto;
+                width: auto;
+                z-index: 1200;
+                display: flex;
+                justify-content: space-between;
+                gap: 0.5rem;
+                padding: 0.5rem 0.75rem;
+            }
+
+            .stats-panel h3 { display: none; }
+
+            .info-panel { display: none; }
+
+            .soldier-info-card {
+                width: 94%;
+                max-width: 94%;
+                padding: 1rem;
+            }
+
+            .controls { padding: 1rem; }
+
+            .btn { padding: 0.6rem 1rem; font-size: 0.95rem; }
+        }
     </style>
 </head>
 

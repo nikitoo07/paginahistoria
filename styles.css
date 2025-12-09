@@ -562,3 +562,54 @@ p, h1, h2, h3, h4, h5, h6 {
     color: black;
   }
 }
+
+/* ===== Extra Mobile Tweaks (<=480px) ===== */
+@media (max-width: 480px) {
+  .hero {
+    padding: var(--space-md);
+  }
+
+  .hero__title {
+    font-size: clamp(1.4rem, 8vw, 2.2rem);
+    margin-bottom: var(--space-md);
+  }
+
+  .hero__subtitle {
+    font-size: 1rem;
+    margin-bottom: var(--space-lg);
+  }
+
+  .section {
+    padding-block: var(--space-xl);
+    padding-inline: 0.75rem;
+  }
+
+  .content-block {
+    padding: var(--space-md);
+    border-radius: calc(var(--radius-md));
+  }
+
+  .section__number {
+    display: none; /* ocultar decoración pesada en móviles */
+  }
+
+  .card-grid,
+  .development-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  .figure__image {
+    aspect-ratio: 16 / 9;
+  }
+
+  .scroll-indicator { display: none; }
+
+  .expand-btn { width: 100%; padding: 0.85rem 1rem; }
+
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+
+  .stats-panel { position: static; width: 100%; margin: 0.5rem 0; border-radius: 10px; }
+
+  .footer { padding-block: var(--space-xl); }
+}
